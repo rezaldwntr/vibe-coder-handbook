@@ -1,0 +1,23 @@
+---
+// Import komponen Footer asli milik Starlight
+import Default from '@astrojs/starlight/components/Footer.astro';
+import type { Props } from '@astrojs/starlight/props';
+---
+
+<Default {...Astro.props} />
+
+<div class="custom-copyright">
+  &copy; {new Date().getFullYear()} Husna Rezal Dewantara (@rezaldwntr). All rights reserved.
+</div>
+
+<style>
+  .custom-copyright {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-3);
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-hairline);
+    font-family: var(--sl-font-mono);
+  }
+</style>
