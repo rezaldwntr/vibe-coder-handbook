@@ -1,95 +1,64 @@
 ---
-title: Maintenance & Documentation
-description: Teknik "Reverse Engineering" untuk membuat dokumentasi otomatis yang selalu up-to-date.
+title: 5.3 Documentation Agents & Starlight
+description: Menggunakan Astro Starlight dan Agen Dokumentasi untuk README yang hidup.
 ---
 
-Dokumentasi adalah hal yang paling dibenci developer untuk ditulis, tapi paling dicintai saat harus dibaca.
+Dokumentasi statis yang mati adalah musuh.
+Di **Vibe Coding**, dokumentasi adalah makhluk hidup yang berevolusi bersama kode.
 
-Masalah utama dokumentasi manual adalah **"Drift"**: Kode berubah setiap hari, tapi dokumentasi hanya diupdate sebulan sekali (atau tidak sama sekali). Hasilnya? Dokumentasi menjadi kebohongan yang menyesatkan.
+Kita menggunakan **Astro Starlight** sebagai platform, dan **Documentation Agents** sebagai penulisnya.
 
-Di **Vibe Coding**, kita membalik prosesnya. Jangan tulis dokumentasi dulu baru coding. **Coding dulu, lalu biarkan AI menulis dokumentasinya.**
+## Why Starlight?
+Handbook ini sendiri dibuat dengan Astro Starlight. Kenapa?
+1.  **Fast:** Dibangun di atas Astro, performanya luar biasa.
+2.  **Content Collections:** Type-safe markdown. Kalau frontmatter salah, build error.
+3.  **Component-Rich:** Bisa memasukkan komponen React/Vue interaktif di dalam dokumentasi.
 
-## The Problem: "The Ghost Town"
+## The Workflow: "Docs-as-Code"
 
-Kamu membuka `README.md` dan melihat instruksi instalasi yang merujuk ke library yang sudah dihapus 2 tahun lalu. Atau kamu melihat dokumentasi API yang bilang endpoint `/login` butuh parameter `username`, padahal di kode sudah diganti jadi `email`.
+Jangan pisahkan dokumentasi di Google Docs atau Notion. Dokumentasi harus hidup di repo yang sama dengan kode (`/src/content/docs`).
 
-Dokumentasi usang lebih berbahaya daripada tidak ada dokumentasi sama sekali.
+### 🤖 Langkah 1: The Documentation Agent
 
-## The Vibe Solution: Reverse Engineering
+Kita tidak menulis dokumentasi manual setiap kali update fitur. Kita menugaskan **Agen**.
 
-Kita menggunakan AI untuk membaca *state* kode yang aktual saat ini, lalu men-generate dokumentasi yang merefleksikan kebenaran tersebut.
+Di Firebase Studio, saat kamu selesai mengerjakan fitur besar (misal: "Fitur Checkout"), jangan langsung merge PR.
 
-### 📄 Langkah 1: The "Auto-README" Prompt
+:::tip[Prompt Doc Agent]
+**Context:** Saya baru saja menyelesaikan fitur Checkout di folder `src/features/checkout`.
+**Task:** Update dokumentasi.
 
-Setiap repo butuh `README.md` yang bagus agar orang lain (dan dirimu di masa depan) paham cara menjalankannya.
-
-:::tip[Prompt README Generator]
-**Context:** Saya ingin membuat `README.md` untuk project ini.
-**Input:** Lihat file:
-1.  @package.json (untuk tahu dependencies dan script).
-2.  @src/App.tsx (untuk tahu ini aplikasi apa).
-3.  @firebase.json (untuk tahu deployment target).
-
-**Task:** Buatkan konten `README.md` yang profesional.
-**Sections:**
-1.  **Project Title & Description:** Jelaskan singkat ini aplikasi apa.
-2.  **Tech Stack:** List teknologi utama (React, Vite, Firebase, Tailwind).
-3.  **Getting Started:** Step-by-step cara clone, install, dan run di local.
-4.  **Project Structure:** Penjelasan singkat folder penting.
-5.  **Scripts:** Penjelasan command `npm run dev`, `build`, dll.
-
-**Tone:** Helpful & Developer-friendly.
+**Actions:**
+1.  Baca semua file di folder tersebut.
+2.  Update file `docs/features/checkout.md` (atau buat jika belum ada).
+3.  Jelaskan alur data (Flow) dan cara penggunaan komponennya.
+4.  Jika ada perubahan API, update `docs/api-reference.md`.
+5.  Buat **Pull Request** terpisah untuk update dokumentasi ini.
 :::
 
-### 🔌 Langkah 2: The "API Documenter" Prompt
+Agen akan:
+*   Menganalisis kode barumu.
+*   Menulis Markdown yang rapi sesuai format Starlight.
+*   Menyiapkan PR untuk kamu review.
 
-Jika kamu membuat Backend API (misal Cloud Functions), dokumentasi endpoint adalah harga mati. Jangan tulis di Notion manual. Minta AI generate tabel Markdown atau bahkan spesifikasi OpenAPI (Swagger).
+### 📝 Langkah 2: Auto-Generated Reference
 
-:::tip[Prompt API Docs]
-**Context:** Lihat file backend di @functions/src/index.ts (dan controller terkait).
+Untuk referensi API atau SDK, gunakan tools seperti **TypeDoc** yang dikombinasikan dengan Starlight.
+Minta Agent untuk konfigurasi pipeline-nya.
 
-**Task:** Buatkan dokumentasi API untuk endpoint yang ada di file tersebut.
-
-**Format:** Tabel Markdown.
-| Endpoint | Method | Params (Body/Query) | Auth Required? | Success Response |
-| :--- | :--- | :--- | :--- | :--- |
-| `/api/transaction` | POST | `{ amount: number }` | Yes | `200 OK` |
-
-**Requirement:**
-Analisis kode validator (zod/joi) untuk menentukan parameter yang wajib dan opsional secara akurat.
+:::tip[Prompt Config]
+"Bantu saya setup pipeline agar setiap kali `npm run build` dijalankan, komentar JSDoc di seluruh file `.ts` diekstrak menjadi file Markdown di folder `src/content/docs/reference`."
 :::
 
-## Self-Documenting Code (JSDoc)
+## The "Explain" Component
 
-Selain file terpisah, dokumentasi terbaik hidup *di dalam* kode itu sendiri (Comments). Tapi menulis JSDoc itu melelahkan.
+Di Starlight, kita bisa membuat komponen interaktif.
+Bayangkan dokumentasi di mana user bisa "Mencoba" API langsung di halaman tersebut.
 
-:::tip[Prompt JSDoc]
-**Context:** Lihat fungsi yang saya highlight.
-**Task:** Tambahkan komentar **JSDoc** (atau TSDoc) di atas fungsi ini.
-1.  Jelaskan apa yang fungsi ini lakukan.
-2.  Jelaskan setiap parameter (`@param`) dan tipe datanya.
-3.  Jelaskan nilai kembalian (`@returns`).
-4.  Berikan satu contoh penggunaan (`@example`).
+Minta Agent membuatkan komponen ini.
+
+:::tip[Prompt Interactive Docs]
+"Buatkan komponen Astro `<ApiPlayground />`. Komponen ini harus menerima `endpoint` dan `method` sebagai props, lalu merender tombol 'Try It' yang melakukan fetch request sungguhan dan menampilkan respons JSON-nya."
 :::
 
-### Hasilnya:
-
-```typescript
-/**
- * Menghitung total harga belanjaan termasuk pajak dan diskon.
- * 
- * @param {number} subtotal - Total harga barang sebelum pajak.
- * @param {string} userTier - Level user ('gold' | 'silver' | 'bronze').
- * @returns {number} Total harga final yang harus dibayar.
- * 
- * @example
- * const total = calculateFinalPrice(100000, 'gold'); // Returns 95000 (jika diskon 5%)
- */
-export function calculateFinalPrice(subtotal: number, userTier: string): number {
-  // ... implementation
-}
-```
-
-Dengan cara ini, saat developer lain mengarahkan mouse ke fungsi tersebut di VS Code, pop-up penjelasan akan muncul otomatis.
-
-> **Vibe Check:** Dokumentasi otomatis bukan alasan untuk malas. Review hasilnya. AI mungkin mendokumentasikan bug sebagai "fitur". Tugasmu adalah memverifikasi kebenarannya.
+> **Vibe Check:** Dokumentasi yang baik adalah tanda developer yang peduli. Dengan bantuan Agen, tidak ada lagi alasan "tidak sempat nulis dokumentasi".

@@ -1,91 +1,90 @@
 ---
-title: Data Integration
-description: Menghubungkan UI dengan Database menggunakan Few-Shot Prompting untuk konsistensi kode.
+title: 3.4 Data Integration (Generated SDKs)
+description: Menghubungkan Frontend dan Backend tanpa menulis fetch manual menggunakan Firebase Data Connect.
 ---
 
-Sekarang kita punya UI yang cantik (Frontend) dan logika bisnis yang kuat (Backend). Saatnya menjahit keduanya.
+Salah satu sumber bug terbesar di aplikasi web adalah **Typo**.
+Backend mengirim field `user_name`, tapi Frontend membaca `username`. `undefined` di mana-mana.
 
-Tantangan utama saat meminta AI menulis kode data fetching (misal: mengambil data dari Firestore) adalah **inkonsistensi gaya**.
+Dulu solusinya adalah menulis interface TypeScript manual dan berdoa agar sinkron.
+Di 2026, solusinya adalah **Generated SDKs** dari Firebase Data Connect.
 
-## The Problem: "Code Salad"
+## The Problem: "Code Salad" & Type Mismatch
 
-Jika kamu meminta *"Buatkan fungsi untuk ambil data user"*, hari ini AI mungkin memberimu kode pakai `fetch()`, besok pakai `axios`, lusa pakai `onSnapshot` realtime, dan kadang lupa `unsubscribe` listener-nya.
+Menulis query manual (`fetch('/api/users')`) atau menggunakan `onSnapshot` mentah seringkali menghasilkan kode yang tidak konsisten dan tidak aman secara tipe (not type-safe).
 
-Hasilnya? Projectmu jadi "Code Salad"—campur aduk berbagai gaya coding yang sulit di-maintain.
+## The Vibe Solution: Query-Driven Development
 
-## The Vibe Solution: Few-Shot Prompting
+Dengan Data Connect, kita tidak menulis kode fetching. Kita menulis **Query (GraphQL)**, dan Firebase Studio otomatis membuatkan fungsi TypeScript yang siap pakai.
 
-LLM (Large Language Model) adalah peniru yang ulung. Jika kamu memberikan **satu contoh** (shot) kode yang *sempurna* menurut standarmu, ia akan menirunya dengan sangat presisi untuk kasus lain.
+### Langkah 1: Tulis Query (Di file `.gql`)
 
-Ini disebut **Few-Shot Prompting**.
+Minta Agent untuk membuatkan query operasi data.
 
-### 📸 Langkah 1: Tentukan "Golden Pattern"
+:::tip[Prompt Query]
+"Buatkan query Data Connect untuk mengambil profil user beserta 5 transaksi terakhirnya."
+:::
 
-Tentukan satu gaya coding yang kamu sukai. Misal, untuk Firestore di React, kita sepakat menggunakan pola **Custom Hook** dengan `onSnapshot` (realtime) dan state management sederhana.
-
-**Contoh Pattern (simpan di `docs/patterns/firestore-hook.ts` jika perlu):**
-
-```typescript
-// Pattern: Realtime Document Fetch
-import { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-export function useUserData(userId: string) {
-  const [data, setData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    if (!userId) return;
-    const unsub = onSnapshot(doc(db, 'users', userId), 
-      (doc) => {
-        setData(doc.data() as User);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setLoading(false);
-      }
-    );
-    return () => unsub(); // Cleanup is mandatory!
-  }, [userId]);
-
-  return { data, loading, error };
+Agent akan menulis di `client/queries.gql`:
+```graphql
+query GetUserDashboard($uid: UUID!) {
+  user(id: $uid) {
+    name
+    email
+    transactions(limit: 5, orderBy: {createdAt: DESC}) {
+      amount
+      status
+    }
+  }
 }
 ```
 
-### 🎯 Langkah 2: The "Copycat" Prompt
+### Langkah 2: Auto-Generated SDK
 
-Gunakan prompt ini untuk membuat hook data fetching fitur lain (misal: Transaksi).
+Begitu file `.gql` disimpan, Firebase Data Connect (di latar belakang) men-generate SDK TypeScript.
 
-:::tip[Copy Prompt Ini]
-**Context:** Kita sedang mengintegrasikan data Firestore ke React.
-**Style Guide:** Lihat kode berikut sebagai **Golden Pattern** kita:
+### Langkah 3: Integrasi di Komponen (Tanpa Fetch Manual)
+
+Sekarang, di komponen React kamu, cukup import fungsinya. Fungsinya sudah *Type-Safe*!
 
 ```typescript
-[PASTE KODE CONTOH DI ATAS DI SINI]
+import { getUserDashboard } from '@firebase/gen/my-app'; // Generated!
+
+// Di Server Component
+export default async function Dashboard({ params }) {
+  const data = await getUserDashboard({ uid: params.id });
+  
+  // TypeScript tahu persis isi 'data'!
+  // Jika kamu ketik 'data.user.addres', editor akan error (typo address).
+  return <div>Hello {data.user.name}</div>;
+}
 ```
 
-**Task:** Buatkan Custom Hook baru bernama `useActiveTransactions`.
-**Logic:**
-1.  Hook ini menerima `userId`.
-2.  Query ke collection `transactions`.
-3.  Filter di mana `status` == "pending".
-4.  Order by `createdAt` desc.
-5.  **WAJIB** ikuti struktur pattern di atas (gunakan `onSnapshot`, handle loading/error states, dan return function cleanup).
+## Keuntungan Generated SDKs
 
-**Type Definition:** Asumsikan interface `Transaction` sudah ada.
-:::
+1.  **IntelliSense Sempurna:** Editor tahu persis field apa yang tersedia.
+2.  **No More `any`:** Ucapkan selamat tinggal pada `const data: any`.
+3.  **Refactoring Aman:** Jika kamu ubah nama field di database, kode frontend akan error *saat compile*, bukan saat dijalankan user.
 
-## Hasilnya? Konsistensi.
+## Mutasi Data (Writes)
 
-AI tidak akan "berkreasi" aneh-aneh. Ia akan melihat contohmu dan berpikir: *"Oke, user suka pakai `onSnapshot` di dalam `useEffect`, pakai state `loading` terpisah, dan return object. Aku akan buatkan persis seperti itu tapi query-nya diganti."*
+Sama mudahnya. Definisikan mutasi di `.gql`:
 
-## Mengapa Tidak Library Fetching (TanStack Query)?
+```graphql
+mutation CreateOrder($amount: Int!) {
+  order_insert(data: {amount: $amount})
+}
+```
 
-Untuk pemula atau project skala kecil-menengah, `useEffect` + `onSnapshot` native Firebase seringkali cukup dan lebih mudah di-debug.
+Lalu panggil di Server Action:
 
-Namun, jika kamu menggunakan **TanStack Query (React Query)**, teknik Few-Shot ini justru **lebih penting**. Kode React Query punya banyak boilerplate. Berikan satu contoh konfigurasi query yang benar, dan AI akan men-generate query lain dengan setting cache/stale-time yang seragam.
+```typescript
+import { createOrder } from '@firebase/gen/my-app';
 
-> **Vibe Check:** Konsistensi kode > Kecanggihan kode. Lebih baik punya 10 file fetching yang "biasa saja" tapi polanya sama, daripada 10 file canggih tapi gayanya beda-beda.
+async function buyAction(formData) {
+  'use server';
+  await createOrder({ amount: 50000 });
+}
+```
+
+> **Vibe Check:** Jangan pernah menulis `fetch()` manual lagi untuk data inti. Biarkan mesin yang menjahit koneksi antara Frontend dan Backend.

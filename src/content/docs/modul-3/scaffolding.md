@@ -1,77 +1,60 @@
 ---
-title: Scaffolding & Boilerplate
-description: Teknik inisialisasi project cepat tanpa konflik versi.
+title: 3.1 Instant Scaffolding (No-Code Init)
+description: Inisialisasi proyek full-stack tanpa menyentuh terminal menggunakan App Prototyping Agent.
 ---
 
-Memulai project baru seharusnya menyenangkan, bukan frustrasi karena *dependency hell* di 5 menit pertama.
+Memulai proyek baru dulu identik dengan "Dependency Hell": versi Node tidak cocok, config Tailwind bentrok, atau TypeScript error di baris pertama.
+Di **Firebase Studio 2026**, kita meninggalkan terminal bash untuk inisialisasi.
 
-Di Project IDX, kamu memiliki terminal Linux penuh. Namun, seringkali tutorial di internet sudah usang (outdated). Jika kamu copy-paste perintah instalasi dari blog tahun lalu, kemungkinan besar kamu akan bertemu error `E_RESOLVE` atau konflik peer dependency.
+Kita menggunakan **App Prototyping Agent**.
 
-## The Problem: "Dependency Hell" Sejak Awal
+## The Problem: Konfigurasi Manual itu Rapuh
 
-Pernah mengalami ini? Kamu install React terbaru, lalu install library UI, dan tiba-tiba terminal merah semua karena versi React tidak cocok. Atau kamu lupa flag `--ts` saat init Vite sehingga project jadi JavaScript biasa padahal maunya TypeScript.
+Prompt lama seperti *"Berikan perintah bash untuk install React + Vite + Tailwind"* sudah usang. Mengapa?
+1.  **Versi Berubah Cepat:** Jawaban AI tentang versi library sering kadaluarsa dalam hitungan minggu.
+2.  **Human Error:** Salah copy-paste satu baris perintah bisa merusak environment.
 
-## The Vibe Solution: The "Safe Scaffolder" Prompt
+## The Vibe Solution: Multimodal Agent Initialization
 
-Alih-alih mengetik perintah `npm create vite@latest` dan menebak-nebak opsi selanjutnya, biarkan AI meracik **urutan perintah yang pasti jalan** (compatible) untuk stack yang kamu pilih.
+Sekarang, kita tidak meminta *resep* (kode bash), kita memesan *makanan jadi* (proyek yang sudah berjalan).
 
-### 🎯 The "Safe Scaffolder" Prompt
+### 📸 Langkah 1: The "Vision" Prompt
 
-Gunakan prompt ini di panel Chat Gemini.
+Jangan hanya teks. Jika kamu punya sketsa di kertas atau screenshot aplikasi referensi, **upload** ke App Prototyping Agent.
 
-:::tip[Copy Prompt Ini]
-**Context:** Saya bekerja di terminal Linux (Project IDX).
-**Goal:** Saya ingin menginisialisasi project baru dengan stack berikut:
-1.  **Frontend:** React (Vite) + TypeScript.
-2.  **Styling:** Tailwind CSS (setup lengkap dengan `postcss` dan `autoprefixer`).
-3.  **Backend/Auth:** Firebase SDK (v10+).
+:::tip[Copy Prompt Ini ke Agent]
+**Context:** Saya ingin membangun aplikasi [Nama Aplikasi, misal: POS Cafe].
+**Input:** Lihat gambar sketsa layout meja dan menu yang saya upload.
 
-**Task:** Berikan saya **urutan perintah terminal (bash commands)** langkah-demi-langkah untuk:
-1.  Membuat project di folder saat ini (atau folder baru).
-2.  Menginstall dependencies tanpa error versioning.
-3.  Melakukan inisialisasi Tailwind (buat file config).
-4.  Membuat file `firebase.ts` kosong di `src/`.
+**Task:** Bangun scaffold proyek lengkap (Full Stack).
+**Stack:**
+*   **Frontend:** Next.js (App Router) + Tailwind CSS.
+*   **Backend:** Firebase Data Connect (PostgreSQL) + Genkit.
+*   **Auth:** Firebase Auth.
 
-**Constraint:**
--   Jangan berikan kode file (seperti isi `App.tsx`). Cukup perintah terminal.
--   Gabungkan perintah yang aman digabung (misal: `npm install x y z`).
--   Pastikan versi library kompatibel satu sama lain.
+**Requirements:**
+1.  Buat struktur folder yang rapi (`src/app`, `src/flows`, `dataconnect`).
+2.  Install semua dependencies yang kompatibel.
+3.  Siapkan dummy data di database agar preview tidak kosong.
+4.  Jalankan server development segera.
 :::
 
-## Eksekusi di Terminal
+### 🛠️ Langkah 2: Visual Refinement
 
-Gemini akan memberikan output blok kode bash.
+Dalam hitungan detik, Agent akan:
+1.  Membuat struktur file.
+2.  Menjalankan `npm install` di background.
+3.  Membuka **Live Preview** di panel samping.
 
-1.  Buka Terminal di IDX (`Ctrl + ` `).
-2.  **Jangan copy-paste buta.** Baca sekilas.
-3.  Copy per blok logis dan jalankan.
+Di sini kamu bisa menggunakan fitur **Visual Editor** (Annotate/Select) untuk memperbaiki UI tanpa menyentuh kode CSS.
+*"Geser tombol login ke tengah."*
+*"Ubah tema warna jadi Dark Mode."*
 
-### Contoh Output AI (Simulasi)
+Agent akan melakukan perubahan kode secara real-time.
 
-```bash
-# 1. Create Vite project
-npm create vite@latest my-app -- --template react-ts
-cd my-app
+## Membersihkan Boilerplate? Tidak Perlu.
 
-# 2. Install dependencies (React + Firebase + Tailwind)
-npm install firebase
-npm install -D tailwindcss postcss autoprefixer
+Dulu kita harus menghapus file sampah (`favicon.ico`, `App.css`) manual.
+Dengan App Prototyping Agent, proyek yang dihasilkan sudah **bersih** dan disesuaikan dengan prompt kamu. Tidak ada lagi logo React berputar yang tidak perlu.
 
-# 3. Init Tailwind
-npx tailwindcss init -p
-
-# 4. Create placeholder for Firebase config
-touch src/firebase.ts
-```
-
-## Membersihkan Sampah (Cleaning Boilerplate)
-
-Setelah project ter-install, biasanya banyak file sampah bawaan template (logo React berputar, file CSS default, contoh counter button).
-
-Daripada menghapus manual satu-satu, minta AI melakukannya.
-
-:::tip[Prompt Pembersih]
-"Project sudah ter-install. Tolong berikan perintah terminal untuk **menghapus** file default yang tidak perlu (seperti `src/App.css`, `src/assets/react.svg`, `public/vite.svg`). Dan berikan konten minimal untuk `src/App.tsx` yang hanya menampilkan 'Hello World' agar tidak error saat dijalankan."
-:::
-
-> **Vibe Check:** Scaffolding yang baik adalah kanvas putih yang bersih. Jangan biarkan kode sampah dari template mengganggu fokusmu di awal.
+> **Vibe Check:** Scaffolding modern bukan tentang seberapa cepat kamu mengetik di terminal, tapi seberapa akurat kamu mendeskripsikan hasil akhir ke Agent.

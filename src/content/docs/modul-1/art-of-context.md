@@ -1,62 +1,68 @@
 ---
-title: 1.2 The Art of Context
-description: Teknik memberikan konteks presisi untuk menghindari halusinasi AI di Project IDX.
+title: 1.2 The Art of Context (MCP Era)
+description: Menguasai Model Context Protocol untuk menghubungkan AI dengan seluruh sistem.
 ---
 
-Salah satu kesalahan pemula terbesar saat menggunakan AI Assistant adalah menganggap AI "maha tahu" seluruh kode kita secara magis. Di Project IDX, kemampuan AI hanya sebagus konteks yang kamu berikan. Tanpa konteks, AI akan **berhalusinasi**—mengarang nama fungsi, mengimpor library yang tidak ada, atau memberikan solusi usang.
+Selamat datang di era **Model Context Protocol (MCP)**.
+Jika di masa lalu kita harus melakukan "Context Injection" secara manual (copy-paste file atau pakai `@file`), di tahun 2026 ini kita menggunakan standar industri baru: **MCP**.
 
-## The Problem: "Magic Fix" Syndrome
+## Apa itu MCP?
 
-Developer sering bertanya pada AI: *"Kenapa fungsi login saya error?"* tanpa memberikan detail file mana yang sedang dibahas.
+Bayangkan MCP sebagai **"USB-C untuk Aplikasi AI"**.
+Ini adalah standar terbuka yang memungkinkan Gemini di Firebase Studio untuk terhubung ke sumber data eksternal secara *real-time* dan aman, tanpa kamu harus menyalin isinya ke chat window.
 
-Masalahnya:
-1.  **Ambiguitas:** AI tidak tahu apakah kamu pakai Firebase Auth, Auth0, atau custom JWT.
-2.  **Copy-Paste Fatigue:** Menyalin manual ratusan baris kode ke chat window itu melelahkan dan sering kali melupakan file dependensi (seperti `types.ts` atau `config.js`).
-3.  **Halusinasi:** AI akan menebak-nebak implementasi, menghasilkan kode yang terlihat benar tapi gagal saat dijalankan.
+| Fitur | Context Injection Lama (`@file`) | Model Context Protocol (MCP) |
+| :--- | :--- | :--- |
+| **Cakupan** | File lokal di editor. | **Seluruh Sistem** (Database, Logs, Git, API Eksternal). |
+| **Data** | Statis (Code snapshot). | **Dinamis & Real-time** (Live DB rows, Error Logs). |
+| **Keamanan** | Risiko ekspos data sensitif jika di-paste. | **Terstandarisasi & Terkontrol** via server MCP. |
 
-## The Vibe Solution: Context Injection
+## Menghubungkan Firebase MCP Server
 
-Project IDX memiliki fitur native untuk menyuntikkan (inject) konteks secara presisi ke dalam Gemini. Alih-alih copy-paste, kita menggunakan fitur **Codebase Awareness**.
+Firebase Studio memiliki dukungan *native* untuk MCP. Kamu bisa mengonfigurasi file `.idx/mcp.json` untuk memberi Gemini "mata" ke layanan Firebase produksimu.
 
-Kunci dari *Art of Context* adalah prinsip: **"Don't tell, Show."**
-Jangan ceritakan errornya, tunjukkan filenya.
+### Konfigurasi Dasar `.idx/mcp.json`
 
-### Fitur Kunci di IDX:
-*   **`@file` Reference:** Mengetik `@` di chat bar memungkinkan kamu memilih file spesifik agar AI "membaca" file tersebut sebelum menjawab.
-*   **Selection Context:** Highlight/blok kode di editor sebelum membuka chat. Gemini otomatis tahu kamu bertanya tentang *potongan kode itu saja*.
+```json
+{
+  "mcpServers": {
+    "firebase-prod": {
+      "command": "firebase",
+      "args": ["mcp:start", "--project", "my-app-prod"],
+      "capabilities": ["logging", "firestore", "hosting"]
+    },
+    "github-repo": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "..." 
+      }
+    }
+  }
+}
+```
 
-## The Prompt: Debugging with Precision
+## Skenario Penggunaan: The "Omniscient" Debugging
 
-Gunakan teknik ini saat kamu mengalami bug spesifik tetapi tidak paham letak kesalahannya.
+Dengan MCP, kamu bisa memberikan perintah yang dulunya mustahil:
 
-### 🎯 The "Surgical Debugger" Prompt
-
-Pilih file yang bermasalah (misal: `authController.ts`) atau highlight fungsi yang error, lalu gunakan prompt ini:
-
-:::tip[Copy Prompt Ini]
-**Context:** Saya sedang melihat file @authController.ts (atau code selection ini). Ini adalah fungsi login menggunakan Firebase Auth.
-
-**Task:** Analisis kenapa fungsi `loginUser` mengembalikan error "undefined property" pada objek user.
-
-**Requirements:**
-1.  Jangan ubah struktur logika async/await yang sudah ada.
-2.  Cek apakah ada kesalahan *destructuring* atau *typing* (TypeScript).
-3.  Berikan kode perbaikan lengkap untuk fungsi tersebut saja.
-4.  Jelaskan root cause dalam 1 kalimat singkat.
+### 1. Analisis Crash Produksi
+:::tip[Prompt dengan MCP]
+"Analisis log error terakhir dari **Crashlytics** (via Firebase MCP) yang terjadi 5 menit lalu. Temukan baris kode di **Repo GitHub** ini yang menyebabkan error tersebut, dan sarankan perbaikan."
 :::
 
-## Implementation: Workflow di Project IDX
+Agen akan:
+1.  Mengakses server MCP Firebase untuk baca log crash.
+2.  Melihat stack trace.
+3.  Mengakses server MCP GitHub untuk membaca versi kode yang sedang deploy.
+4.  Memberikan solusi perbaikan di editor lokalmu.
 
-Berikut cara eksekusi "Vibe Coding" untuk konteks:
+### 2. Query Data Cerdas
+:::tip[Prompt dengan MCP]
+"Cek database **Firestore** (via MCP), apakah ada user dengan email duplicate yang mendaftar hari ini? Jika ada, buatkan script migrasi untuk membersihkannya."
+:::
 
-1.  **Buka Panel Gemini:** Tekan `Cmd+Shift+I` (Mac) atau `Ctrl+Shift+I` (Windows) atau klik ikon kilau di sidebar.
-2.  **Inject File:** Ketik `@` lalu ketik nama file (contoh: `@dev.nix` atau `@package.json`). Ini wajib dilakukan jika pertanyaanmu menyangkut konfigurasi.
-3.  **Cross-File Debugging:** Jika error mungkin disebabkan oleh file lain, masukkan keduanya.
-    *   *Contoh:* "Cek konflik antara `@frontend/api.ts` dan `@backend/server.ts` mengenai format JSON response."
+## Kesimpulan
 
-### Pro Tip: Menghindari "Context Overflow"
-Jangan masukkan seluruh file proyek jika tidak perlu. AI memiliki batas "jendela memori" (token limit).
-*   ❌ **Salah:** "Cek seluruh folder `src` saya."
-*   ✅ **Benar:** "Cek `@Navbar.astro` dan `@global.css`, kenapa style-nya berantakan?"
-
-Dengan menguasai *context injection*, kamu mengubah Gemini dari sekadar "chatbot" menjadi "Senior Pair Programmer" yang paham codebase-mu.
+Konsep "Konteks" bukan lagi sekadar "apa yang ada di layar editor saya".
+Dengan MCP, Konteks adalah **apa yang terjadi di seluruh ekosistem aplikasimu**. Tugasmu sebagai Vibe Coder adalah memastikan saluran MCP ini terpasang dengan benar.

@@ -1,78 +1,56 @@
 ---
-title: Code Archeology
-description: Teknik membedah kode warisan (legacy) tanpa rasa takut.
+title: 4.1 Code Archeology (Infinity Context)
+description: Membedah arsitektur kode raksasa menggunakan Jendela Konteks 2 Juta Token.
 ---
 
-Masuk ke project yang sudah berjalan tahunan seringkali terasa seperti masuk ke hutan belantara tanpa peta. Variabel bernama `x`, fungsi 500 baris, dan komentar kode yang terakhir diupdate tahun 2019.
+Masuk ke project legacy ("warisan") dulu terasa seperti masuk hutan gelap dengan senter redup.
+Kita harus menjalankan perintah `tree`, menebak struktur folder, dan membaca file satu per satu.
 
-Di **Vibe Coding**, kita tidak membaca kode baris-demi-baris dari awal. Kita bertindak sebagai **Arkeolog Code** yang menggunakan AI untuk memetakan situs penggalian.
+Di era **Gemini 3 Pro** dengan **2 Juta Token Context**, kita tidak butuh senter. Kita punya satelit.
 
-## The Problem: "Dokumentasi adalah Mitos"
+## The Power of Infinity Context
 
-Project lama jarang punya dokumentasi yang *up-to-date*. Developer aslinya mungkin sudah resign. Jika kamu mencoba memahami flow dengan cara "Trace manual" (`Ctrl+Click` satu per satu), kamu akan kehabisan "baterai mental" (cognitive load) sebelum menemukan bug-nya.
+Firebase Studio memungkinkan Gemini untuk "membaca" **seluruh repositori** sekaligus.
+Bukan hanya potongan file, tapi setiap baris kode, setiap konfigurasi, dan setiap dokumentasi di dalam projectmu.
 
-## The Vibe Solution: AI Tour Guide
+### Strategi Baru: The "Repository Mental Map"
 
-Gemini di Project IDX memiliki keunggulan besar: **Context Window** yang besar. Ia bisa memuat banyak file sekaligus dan menjelaskan hubungannya.
+Jangan lagi copy-paste output `tree`. Instruksikan AI untuk menelan semua konteks dan memuntahkan pemahaman arsitektural.
 
-### 🗺️ Langkah 1: The 10,000 Feet View
+:::tip[Copy Prompt Ini]
+**Target:** @repository (Seluruh Project)
+**Task:** Buat "Peta Mental" arsitektur proyek ini.
 
-Sebelum menyentuh satu file pun, pahami dulu **peta wilayahnya**.
-
-1.  Buka terminal IDX.
-2.  Jalankan `tree src -L 2` (atau `find src -maxdepth 2`) untuk melihat struktur folder utama.
-3.  Copy outputnya ke chat.
-
-:::tip[Prompt Arsitek]
-**Context:** Saya baru onboarding di project ini. Berikut adalah struktur foldernya:
-```text
-[PASTE OUTPUT TREE DI SINI]
-```
-
-**Task:** Analisis struktur proyek ini.
-1.  **Architecture Pattern:** Apakah ini MVC, Clean Architecture, Feature-based, atau Spaghetti?
-2.  **Key Directories:** Di mana kemungkinan besar *Business Logic* tersimpan? Di mana UI Components?
-3.  **Entry Point:** Dari nama filenya, mana yang kemungkinan menjadi titik awal aplikasi berjalan?
+**Analisis:**
+1.  **Bird's Eye View:** Apa pola desain utama yang digunakan? (MVC, Clean Arch, Domain-Driven?).
+2.  **Data Flow:** Lacak bagaimana data mengalir dari Frontend (UI) -> API -> Database. Tunjukkan file kuncinya.
+3.  **Dependency Graph:** Identifikasi modul mana yang paling "berat" (banyak di-import file lain) dan paling rapuh.
+4.  **Inconsistencies:** Temukan pola kode yang tidak konsisten (misal: ada yang pakai `axios`, ada yang pakai `fetch` di folder berbeda).
 :::
 
-### 👶 Langkah 2: Explain Like I'm 5 (ELI5)
+## Deteksi "Time Bombs"
 
-Kamu menemukan file bernama `TransactionController.ts` yang panjangnya 800 baris. Isinya penuh dengan `if-else` bersarang. Jangan baca manual dulu.
+Kode legacy sering menyimpan bom waktu: dependensi sirkular, hardcoded secrets, atau logika bisnis yang duplikat.
 
-:::tip[Prompt ELI5]
-**Context:** Lihat file @src/controllers/TransactionController.ts (ganti dengan file targetmu).
-**Task:** Jelaskan apa yang dilakukan file ini dengan gaya **"Explain Like I'm 5"** (seperti menjelaskan ke anak 5 tahun).
+Gunakan "Infinity Context" untuk menyisir ranjau ini.
 
-**Questions:**
-1.  **Big Picture:** Apa tanggung jawab utama file ini? (Misal: "Ini pak satpam yang ngecek tiket masuk").
-2.  **The Flow:** Ceritakan alurnya seperti dongeng. "Pertama, data masuk... lalu dicek apakah..."
-3.  **Red Flags:** Adakah bagian yang terlihat aneh, berisiko bug, atau *hardcoded*?
+:::tip[Prompt Deteksi Dini]
+**Target:** @repository
+**Task:** Audit kode ini untuk menemukan **Circular Dependencies** dan **Anti-Patterns**.
 
-**Output:** Ringkasan bahasa manusia, hindari jargon teknis yang tidak perlu.
+**Fokus:**
+1.  Cek apakah ada *Utils* yang meng-import *Services* (seharusnya satu arah).
+2.  Cek apakah ada *Hardcoded Secrets* (API Keys) yang terselip di file `.js` atau `.env` yang ter-commit.
+3.  List 3 area kode yang paling sulit di-maintain (Cyclomatic Complexity tinggi) dan butuh refactoring segera.
 :::
 
-### 🕸️ Langkah 3: Connecting the Dots
+## The "Explain It To Me" Button
 
-Kode legacy seringkali "melompat-lompat". Fungsi di file A memanggil fungsi di file B yang mewarisi class di file C.
+Di Firebase Studio, seringkali kamu menemukan fungsi `doMagic()` sepanjang 500 baris tanpa komentar.
+Jangan buang waktu menelusuri variabel `x` dan `y`.
 
-Gunakan fitur **@mention** di IDX untuk memanggil beberapa file sekaligus.
+1.  **Highlight** seluruh fungsi.
+2.  Klik **"Explain This"** (atau tanya di chat).
+3.  Minta penjelasan dengan analogi bisnis: *"Jelaskan logic diskon ini dalam bahasa manusia, abaikan if-else teknisnya."*
 
-:::tip[Prompt Detektif]
-**Context:** Saya sedang menelusuri bug di fitur Diskon.
-Lihat file:
-1.  @src/services/DiscountService.ts
-2.  @src/models/User.ts
-3.  @src/utils/dateHelpers.ts
-
-**Task:** Jelaskan hubungan ketiga file ini. Bagaimana `DiscountService` menggunakan data dari `User`? Apakah ada manipulasi tanggal menggunakan `dateHelpers` yang mencurigakan?
-:::
-
-## Archeology Log
-
-Sama seperti arkeolog mencatat temuannya, kamu harus mendokumentasikan pemahamanmu.
-
-*   Jangan simpan di otak.
-*   Buat file `docs/legacy-notes.md`.
-*   Copy penjelasan AI yang paling berguna ke sana.
-
-> **Vibe Check:** Jangan menghina kode lama ("Siapa sih yang nulis sampah ini?"). Ingat, kode itu pernah menghasilkan uang dan berjalan di production. Hormati *history*-nya, tapi perbaiki masa depannya dengan AI.
+> **Vibe Check:** Code Archeology bukan lagi tentang membaca kode. Ini tentang **menginterogasi** kode. Biarkan AI yang membaca 10.000 baris, kamu yang menyimpulkan artinya.

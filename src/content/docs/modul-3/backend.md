@@ -1,95 +1,85 @@
 ---
-title: Backend Logic
-description: Menulis Cloud Functions yang robust dengan Specification-Driven Prompting.
+title: 3.2 Backend Logic (Genkit Flows)
+description: Membangun logika bisnis cerdas dengan Firebase Genkit dan Zod Validation.
 ---
 
-Frontend cantik tidak ada gunanya jika backend-nya rapuh. Di arsitektur Serverless (seperti Firebase), logika bisnis yang kompleks—seperti kalkulasi poin, pembayaran, atau validasi data sensitif—harus berjalan di **Cloud Functions**, bukan di browser user (client-side).
+Menulis "Cloud Functions" mentah dengan validasi `if-else` manual adalah cara lama.
+Standar industri 2026 untuk backend logic—terutama yang melibatkan AI—adalah **Firebase Genkit Flows**.
 
-Namun, menulis Cloud Functions seringkali *tricky* karena sulit di-debug secara lokal tanpa setup emulator yang benar.
+## Kenapa Genkit?
 
-## The Problem: "Spaghetti Logic"
+Genkit bukan sekadar library AI. Ini adalah framework untuk membangun backend yang:
+1.  **Observable:** Otomatis punya tracing (bisa dilihat di Genkit Developer UI).
+2.  **Type-Safe:** Input dan Output divalidasi ketat oleh schema `Zod`.
+3.  **AI-Native:** Memanggil model Gemini semudah memanggil fungsi biasa.
 
-Developer sering menulis prompt naratif yang panjang:
-*"Buatkan fungsi untuk menghitung total belanja, kalau user member diskon 10%, tapi kalau item promo tidak didiskon, terus kalau total di atas 100 ribu free ongkir..."*
+## The Problem: "Spaghetti Logic" di Backend
 
-Narasi ini membingungkan AI. Terlalu banyak klausa "jika-maka" yang ambigu. Hasilnya? Kode yang penuh bug logic.
+Kode backend lama sering tercampur aduk: validasi input, logika bisnis, pemanggilan database, dan formatting response semua jadi satu fungsi raksasa. Susah di-test, susah di-debug.
 
-## The Vibe Solution: Specification-Driven Prompting
+## The Vibe Solution: Genkit Flow Definition
 
-Komputer (dan LLM) berbicara dalam bahasa data. Cara paling presisi untuk menjelaskan logika adalah dengan memberikan **Contoh Input (Request)** dan **Contoh Output (Response)**.
+Kita meminta Agent untuk membuatkan **Genkit Flow**. Struktur ini memaksa kode kita modular dan aman.
 
-Jangan ceritakan logikanya. **Tunjukkan** datanya.
-
-### 🎯 The "Unit Test" Prompt
-
-Anggap kamu sedang menulis *test case* sebelum kodenya ada.
+### 🎯 The "Flow Architect" Prompt
 
 :::tip[Copy Prompt Ini]
-**Context:** Kita menggunakan Firebase Cloud Functions (Gen 2) dengan TypeScript.
-**Task:** Buatkan fungsi HTTPS callable bernama `calculateOrderTotal`.
+**Context:** Kita menggunakan Firebase Genkit (TypeScript).
+**Task:** Buatkan Flow bernama `suggestMenuPlan`.
 
-**Logic Specs:**
-Fungsi ini menerima daftar item belanja dan profil user, lalu mengembalikan total harga final.
+**Schema (Zod):**
+*   **Input:** `{ userPreferences: string, caloriesLimit: number }`
+*   **Output:** `{ breakfast: string, lunch: string, dinner: string, totalCalories: number }`
 
-**Scenario 1 (Input):**
-```json
-{
-  "userTier": "gold", // Dapat diskon 10% global
-  "items": [
-    { "name": "Baju", "price": 50000, "isPromo": false },
-    { "name": "Celana", "price": 100000, "isPromo": true } // Item promo TIDAK kena diskon tier
-  ]
-}
-```
+**Logic Requirements:**
+1.  Gunakan `gemini-pro` untuk generate menu berdasarkan preferensi user.
+2.  Pastikan total kalori mendekati limit (toleransi 10%).
+3.  Format output JSON harus strik (gunakan `structuredOutput`).
 
-**Expected Output:**
-```json
-{
-  "subtotal": 150000,
-  "discountAmount": 5000, // 10% dari 50.000 (Baju saja)
-  "finalTotal": 145000
-}
-```
-
-**Requirement:**
-1.  Implementasikan logika kalkulasi sesuai contoh data di atas.
-2.  Validasi input menggunakan library `zod` jika memungkinkan.
-3.  Throw `https.HttpsError` jika input tidak valid.
+**Code Structure:**
+Gunakan `ai.defineFlow` dan sertakan schema Zod untuk input/output.
 :::
 
-## Kenapa Ini Berhasil?
+### Contoh Output (Genkit Flow)
 
-Dengan memberikan JSON Input/Output:
-1.  **Ambiguity Killer:** Tidak ada lagi debat tentang "apakah item promo kena diskon?". JSON input menunjukkan `isPromo: true` dan output menunjukkan kalkulasinya. AI "memahami" aturan dari contoh tersebut.
-2.  **Test Ready:** Kamu bisa langsung menyalin JSON input tersebut ke Postman atau Firebase Emulator untuk mengetes fungsi yang dihasilkan.
+Agent akan menghasilkan kode yang bersih dan terstruktur:
 
-## Handling Database Triggers
+```typescript
+import { genkit, z } from 'genkit';
+import { googleAI, geminiPro } from '@genkit-ai/googleai';
 
-Selain HTTPS Callable (yang dipanggil langsung dari App), Cloud Functions sering berjalan otomatis saat database berubah (Triggers).
+export const suggestMenuPlan = ai.defineFlow({
+  name: 'suggestMenuPlan',
+  inputSchema: z.object({
+    userPreferences: z.string(),
+    caloriesLimit: z.number().min(500),
+  }),
+  outputSchema: z.object({
+    breakfast: z.string(),
+    lunch: z.string(),
+    dinner: z.string(),
+    totalCalories: z.number(),
+  }),
+}, async (input) => {
+  // Logic AI atau Database di sini
+  const prompt = `Buatkan menu untuk ${input.userPreferences} max ${input.caloriesLimit} kalori...`;
+  
+  const response = await ai.generate({
+    model: geminiPro,
+    prompt: prompt,
+    output: { format: 'json' } // Structured Output
+  });
 
-Gunakan pola **"Before & After"** untuk prompt Trigger.
+  return response.output();
+});
+```
 
-:::tip[Prompt Firestore Trigger]
-**Context:** Firestore Trigger `onDocumentCreated` di path `transactions/{trxId}`.
-**Task:** Update saldo wallet user setelah transaksi dibuat.
+## Testing di Genkit Developer UI
 
-**Data Change:**
-*   **New Document (Transaction):** `{ "userId": "user_123", "amount": 50000, "type": "credit" }`
-*   **Target Document (User Wallet):**
-    *   *Before:* `{ "balance": 10000 }`
-    *   *After (Expected):* `{ "balance": 60000 }`
+Keajaiban Genkit ada di tool testing-nya.
+1.  Jalankan `npx genkit start`.
+2.  Buka browser (biasanya `localhost:4000`).
+3.  Kamu bisa menjalankan Flow `suggestMenuPlan` dengan input form visual.
+4.  Lihat **Trace**: Berapa lama AI berpikir? Apa prompt persis yang dikirim? Berapa token yang dipakai?
 
-**Requirement:**
-Gunakan `admin.firestore().runTransaction` untuk atomic update agar saldo aman dari race condition.
-:::
-
-## Implementation: Testing di IDX
-
-Project IDX memiliki integrasi Firebase Emulator.
-
-1.  Jalankan emulator: `npm run serve` (atau command sesuai `package.json`).
-2.  Buka tab **Firebase Emulator UI** (biasanya port 4000).
-3.  Masuk ke tab **Functions**.
-4.  Gunakan output AI tadi. Jika AI menggunakan `zod` untuk validasi, pastikan kamu menginstallnya: `npm install zod`.
-
-> **Rule of Thumb:** Jika kamu tidak bisa menuliskan input dan output JSON-nya, berarti kamu belum paham logika bisnisnya. Jangan minta AI coding sampai kamu paham datanya.
+> **Rule of Thumb:** Jangan tulis logika backend tanpa Schema. Dengan Genkit + Zod, kamu mencegah data sampah masuk ke sistemmu sejak pintu gerbang.

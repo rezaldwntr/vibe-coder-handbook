@@ -1,75 +1,48 @@
 ---
-title: 2.1 Dari Abstrak ke PRD
-description: Mengubah ide satu kalimat menjadi dokumen spesifikasi produk (PRD) yang solid.
+title: 2.1 Dari Abstrak ke PRD (Deep Think)
+description: Mengubah ide abstrak menjadi spesifikasi teknis bulletproof menggunakan Gemini 3 Deep Think.
 ---
 
-Developer sering kali terburu-buru. Punya ide aplikasi, langsung `npm init` atau `npx create-astro`. Akibatnya? Di tengah jalan bingung fitur apa yang sebenarnya esensial, database berantakan, dan proyek mangkrak.
+Developer sering kali terburu-buru. Punya ide aplikasi, langsung `npm init` dan coding. Akibatnya? *Feature creep*, logika bolong, dan proyek mangkrak.
 
-Dalam filosofi **Vibe Coding**, kita tidak coding sebelum punya peta. Tapi membuat peta (PRD) secara manual itu membosankan. Di sinilah kita memanfaatkan Gemini sebagai **Product Manager**.
+Di era **Agentic AI**, kita tidak coding sebelum punya "Kitab Suci" (PRD). Dulu kita butuh prompt panjang untuk memaksa AI berperan sebagai Product Manager. Sekarang, kita gunakan **Gemini 3 Deep Think**.
 
-## The Problem: The "Blank Canvas" Paralysis
+## The Power of "System 2" Thinking
 
-Kamu punya ide: *"Aplikasi manajemen sampah untuk desa."*
-Tapi detailnya?
-*   Siapa usernya? Warga? Petugas? Admin?
-*   Flow datanya bagaimana?
-*   Fitur MVP (Minimum Viable Product) apa saja?
+Gemini 3 Deep Think memiliki kemampuan *Test-Time Compute*. Artinya, model ini "berpikir" (menjalankan ribuan simulasi internal) sebelum menjawab.
 
-Tanpa PRD (Product Requirement Document), kamu akan mengalami *feature creep*—menambah fitur seenaknya tanpa arah yang jelas.
+*   **Model Biasa (System 1):** Menjawab instan berdasarkan pola statistik. Bagus untuk draft kasar.
+*   **Deep Think (System 2):** Melakukan *self-correction*, mencari *edge cases*, dan merencanakan *long-horizon dependencies*.
 
-## The Vibe Solution: Role Prompting
+## The Prompt: Deep Specification
 
-Kita akan menggunakan teknik **Role Prompting**. Kita menginstruksikan Gemini untuk tidak berperan sebagai "Asisten AI", melainkan sebagai "Senior Product Manager" yang kritis.
-
-Tujuannya adalah menghasilkan PRD yang berisi:
-1.  **User Personas:** Siapa yang pakai.
-2.  **User Stories:** Apa yang mereka lakukan.
-3.  **Core Features:** Apa yang harus dibangun (Prioritas P0, P1, P2).
-4.  **Tech Stack Recommendation:** Alat yang pas.
-
-## The Prompt: The "Visionary PM"
-
-Gunakan prompt ini di Gemini Chat Panel di awal proyek.
+Aktifkan mode **Deep Think** (atau set `thinking_level="high"` di AI Studio), lalu gunakan prompt ini. Kita tidak perlu lagi mendikte format terlalu kaku, karena Deep Think akan mencari struktur optimalnya sendiri.
 
 :::tip[Copy Prompt Ini]
-**Context:** Saya ingin membangun aplikasi web bernama "[Nama Proyek, misal: EcoDesa]".
-**Ide Dasar:** Aplikasi untuk manajemen bank sampah digital di tingkat RT/RW. Warga bisa setor sampah, dapat poin, dan tukar sembako.
+**Mode:** Deep Think (Activated)
+**Goal:** Saya ingin membangun aplikasi Enterprise-grade bernama "[Nama Proyek]".
+**Core Concept:** Aplikasi [Jelaskan ide dasar, misal: Manajemen Logistik Gudang dengan prediksi stok AI].
 
-**Role:** Bertindaklah sebagai **Senior Product Manager** yang berpengalaman di startup SaaS.
-
-**Task:** Buatkan **Product Requirement Document (PRD)** ringkas untuk MVP (Minimum Viable Product).
+**Task:** Analisis dan buatkan **Product Requirement Document (PRD)** yang komprehensif.
 
 **Requirements:**
-1.  **User Personas:** Definisikan 2-3 role utama (misal: Nasabah, Pengepul, Admin).
-2.  **User Stories:** Tulis 3 user story utama untuk setiap persona (Format: "Sebagai [role], saya ingin [fitur], agar [manfaat]").
-3.  **Key Features (P0 - Critical):** List fitur yang WAJIB ada di versi pertama. Jangan masukkan fitur *nice-to-have*.
-4.  **Database Entities:** Sebutkan entitas data utama yang dibutuhkan (hanya nama entitas, misal: `Users`, `Transactions`).
-5.  **Tone:** Profesional, struktur jelas, gunakan bullet points.
+1.  **Critical Analysis:** Identifikasi 3 risiko terbesar (teknis/bisnis) dari ide ini sebelum mulai merancang.
+2.  **User Personas & Journeys:** Siapa usernya dan bagaimana alur kerja detailnya?
+3.  **Feature Specs (P0/MVP only):** Fitur apa yang *absolut* harus ada. Buang yang tidak perlu.
+4.  **Edge Cases:** Sebutkan skenario "unhappy path" yang sering terlewat (misal: koneksi putus saat scan barcode).
 :::
+
+## Mengapa Deep Think Berbeda?
+
+Jika kamu menggunakan prompt di atas pada model standar, ia mungkin hanya memberikan list fitur generik.
+**Gemini 3 Deep Think** akan memberikan output seperti:
+
+> *"Warning: Ide penggunaan kamera web untuk scan barcode di gudang gelap memiliki risiko kegagalan tinggi. Saran: Tambahkan fitur input manual atau integrasi hardware scanner via USB."*
+
+Ini adalah level "Partner Berpikir" yang menyelamatkanmu dari minggu-minggu pengembangan fitur yang sia-sia.
 
 ## Implementation: Dokumen Hidup
 
-Setelah Gemini memberikan output, jangan biarkan hanya di chat.
-
-1.  Buat file baru di root proyekmu: `PRD.md`.
-2.  Salin hasil output Gemini ke file tersebut.
-3.  Baca dan validasi. Hapus fitur yang menurutmu terlalu ambisius untuk tahap awal.
-
-### Contoh Hasil (Cuplikan):
-
-> **EcoDesa - MVP PRD**
->
-> **1. User Personas**
-> *   **Nasabah:** Warga yang menyetor sampah.
-> *   **Admin Unit:** Pengurus bank sampah yang mencatat timbangan.
->
-> **2. User Stories (P0)**
-> *   *Sebagai Nasabah,* saya ingin melihat saldo poin saya saat ini, agar saya tahu kapan bisa menukar hadiah.
-> *   *Sebagai Admin,* saya ingin menginput berat sampah per kategori, agar saldo nasabah otomatis bertambah.
->
-> **3. Data Entities**
-> *   `User` (Role, Saldo)
-> *   `TrashCategory` (Jenis, Harga/kg)
-> *   `Transaction` (Tanggal, Berat, Total Poin)
-
-Sekarang, `PRD.md` ini akan menjadi **"Kitab Suci"** yang akan kamu referensikan (`@PRD.md`) di setiap prompt berikutnya saat meminta AI membuat kode. Ini menjaga AI tetap fokus pada spesifikasi yang sudah disepakati.
+1.  Simpan output Deep Think ke file `PRD.md`.
+2.  Ini adalah **Source of Truth**.
+3.  Setiap kali kamu meminta Agent untuk menulis kode, Agent akan membaca file ini untuk memastikan kodenya sesuai spesifikasi, bukan halusinasi.

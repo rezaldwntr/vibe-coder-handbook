@@ -1,103 +1,80 @@
 ---
-title: Tech Stack & Database Modeling
-description: Merancang arsitektur data scalable dengan teknik Tree of Thoughts.
+title: 2.3 Modern Data Architecture (SQL is Back)
+description: Memilih antara Data Connect (SQL) dan Firestore (NoSQL) di era Gemini 3.
 ---
 
-Setelah **PRD (Product Requirement Document)** matang, langkah selanjutnya bukan langsung coding UI, melainkan **menentukan fondasi data**.
+Salah satu kesalahan terbesar tutorial Firebase lama adalah memaksakan **Cloud Firestore (NoSQL)** untuk *semua* jenis data.
+Akibatnya? Developer pusing dengan "Denormalisasi", duplikasi data, dan query yang terbatas.
 
-Di ekosistem Firebase/Project IDX, Firestore (NoSQL) adalah primadona. Namun, mendesain NoSQL sangat berbeda dengan SQL. Jika kamu salah desain di awal (misal: terlalu banyak nesting atau terlalu ternormalisasi), aplikasi akan lambat dan biaya membengkak saat user bertambah.
+Di tahun 2026, **SQL kembali menjadi raja**.
+Dengan peluncuran **Firebase Data Connect** (berbasis Cloud SQL PostgreSQL), kita kini memiliki kekuatan relasional SQL dengan kemudahan development a la Firebase.
 
-## The Problem: SQL Mindset di NoSQL
+## The Great Debate: Data Connect vs Firestore
 
-Developer sering meminta AI: *"Buatkan skema database untuk aplikasi ini."*
-AI biasanya akan memberikan jawaban standar yang "aman" tapi tidak performant, seringkali meniru gaya SQL (banyak relasi) atau terlalu dalam nesting-nya (sub-collection yang sulit di-query group).
+Jangan bingung. Gunakan panduan sederhana ini:
 
-## The Vibe Solution: Tree of Thoughts (ToT)
+| Fitur | **Firebase Data Connect (PostgreSQL)** | **Cloud Firestore (NoSQL)** |
+| :--- | :--- | :--- |
+| **Data Structure** | Relasional (Tabel, Foreign Keys). | Dokumen & Koleksi (JSON-like). |
+| **Use Case** | Data bisnis kompleks, Inventaris, Transaksi Keuangan, ERP. | Chat apps, Live Collaboration, CMS konten sederhana, Notifikasi. |
+| **Query Power** | Sangat Kuat (Joins, Aggregations, Vector Search). | Terbatas (No Joins, Index-based). |
+| **AI Readiness** | **High** (Native Vector Search untuk RAG). | Medium. |
 
-Kita akan menggunakan teknik **Tree of Thoughts**. Kita tidak meminta **satu** jawaban. Kita meminta AI untuk:
-1.  Berpikir ke **3 arah berbeda** (Skenario).
-2.  Mengevaluasi **Pros & Cons** masing-masing.
-3.  Memilih **pemenang** berdasarkan skalabilitas dan biaya (Read/Write ops).
+**Rekomendasi Vibe Coding 2026:**
+Gunakan **Data Connect (SQL)** sebagai *default* untuk data inti aplikasi. Gunakan Firestore hanya untuk fitur spesifik yang butuh real-time sync ekstrim atau struktur dokumen yang sangat dinamis.
 
-### 🎯 The "Data Architect" Prompt
+## Obsolescence of "Manual Tree of Thoughts"
 
-Pastikan kamu sudah memiliki file `PRD.md` di workspace-mu agar AI bisa membaca konteksnya.
+Dulu, kita harus memandu AI pelan-pelan: *"Coba pikirkan opsi A, B, C untuk skema database..."*.
+Sekarang, **Gemini 3 Deep Think** sudah melakukan percabangan pemikiran (*multi-path reasoning*) ini secara internal. Memintanya menuliskan opsi-opsi jelek di chat hanya membuang waktu.
+
+Kita langsung minta hasil optimal dengan **Rationale** (alasan).
+
+### 🎯 The "Data Architect" Prompt (New Standard)
+
+Gunakan prompt ini untuk merancang skema PostgreSQL yang *robust*.
 
 :::tip[Copy Prompt Ini]
-**Context:** Kita sedang membangun aplikasi berdasarkan spec di @PRD.md. Kita akan menggunakan **Cloud Firestore (NoSQL)**.
+**Mode:** Deep Think
+**Context:** Lihat @PRD.md.
+**Task:** Rancang skema database **PostgreSQL** untuk aplikasi ini (via Firebase Data Connect).
 
-**Task:** Rancang struktur database (Schema Design). Gunakan metode **"Tree of Thoughts"** untuk mengevaluasi solusi terbaik.
+**Requirements:**
+1.  **Entities & Relationships:** Tentukan tabel-tabel utama dan relasi (One-to-Many, Many-to-Many).
+2.  **Schema Definition:** Tuliskan dalam format GraphQL SDL (standar Data Connect) atau SQL DDL.
+3.  **Vector Search:** Jika ada fitur AI (misal: pencarian produk semantik), tambahkan kolom `vector` embedding.
+4.  **Rationale:** Jelaskan kenapa kamu memilih struktur relasi tersebut. Kenapa bukan JSONB?
 
-**Steps:**
-1.  **Brainstorming:** Buat 3 opsi struktur data JSON yang berbeda:
-    *   **Opsi A (Nested/Hierarchical):** Memanfaatkan sub-collections secara agresif.
-    *   **Opsi B (Flat/Root Collections):** Semua data di root, dihubungkan dengan ID (mirip SQL style).
-    *   **Opsi C (Hybrid/Denormalized):** Kombinasi keduanya, duplikasi data seperlunya untuk optimasi *Read Performance* (sedikit write lebih mahal tidak masalah).
-2.  **Evaluation:** Kritik setiap opsi berdasarkan:
-    *   *Scalability:* Apa yang terjadi jika data mencapai 1 juta record?
-    *   *Cost:* Mana yang paling hemat biaya Read?
-    *   *Querying:* Mana yang paling mudah di-filter di frontend?
-3.  **Recommendation:** Pilih satu pemenang dan berikan struktur JSON finalnya.
-
-**Output Format:** Berikan analisis singkat, lalu struktur JSON final untuk opsi terbaik.
+**Output:** Skema final dan penjelasan singkat.
 :::
 
-## Menganalisis Output AI
+## Contoh Output AI (Data Connect SDL)
 
-AI akan memberikan output seperti ini (contoh kasus: Aplikasi Bank Sampah dari modul sebelumnya):
+AI akan langsung memberikan skema yang siap dipakai di Firebase Studio:
 
-### Contoh Analisis AI (Simulasi)
-*   **Opsi A (Nested):** `Users/{uid}/Transactions/{id}`.
-    *   *Pros:* Data terisolasi rapi.
-    *   *Cons:* Sulit membuat fitur "Leaderboard Transaksi Terbanyak se-Kecamatan" karena harus query ke semua sub-collection user.
-*   **Opsi B (Flat):** `Users/{uid}` dan `Transactions/{id}` (ada field `userId`).
-    *   *Pros:* Query fleksibel.
-    *   *Cons:* Butuh 2x Read untuk mengambil profil user saat menampilkan list transaksi.
-*   **Opsi C (Hybrid - Pemenang):** `Transactions` di root, tapi di dalam dokumen transaksi disimpan ringkasan data user (`userName`, `userAvatar`).
-    *   *Pros:* 1x Read sudah dapat semua info untuk UI list. Sangat cepat.
+```graphql
+# Skema Order Management
+type Order @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  userId: UUID!
+  user: User! @relation(fields: ["userId"], references: ["id"])
+  status: String!
+  totalAmount: Decimal!
+  items: [OrderItem!]!
+}
 
-### Contoh Struktur JSON Final
-
-Ini adalah contoh struktur yang mungkin diberikan AI (Opsi C). Perhatikan adanya **Denormalisasi** (data user dicopy ke transaksi).
-
-```json
-{
-  "users": {
-    "user_123": {
-      "name": "Budi Santoso",
-      "role": "nasabah",
-      "walletBalance": 50000,
-      "createdAt": "Timestamp"
-    }
-  },
-  "trashCategories": {
-    "cat_A": {
-      "name": "Plastik PET",
-      "pricePerKg": 3000
-    }
-  },
-  "transactions": {
-    "trx_999": {
-      "userId": "user_123",
-      "userName": "Budi Santoso", // Denormalized data
-      "categoryName": "Plastik PET", // Denormalized data
-      "weightKg": 2.5,
-      "totalAmount": 7500,
-      "status": "completed",
-      "timestamp": "Timestamp"
-    }
-  }
+type OrderItem @table {
+  id: UUID!
+  orderId: UUID!
+  productId: UUID!
+  quantity: Int!
+  # AI Cerdas: Menambahkan snapshot harga saat beli
+  priceAtPurchase: Decimal! 
 }
 ```
 
-## Implementation: Kunci Skema
+### Validasi Skema
+Deep Think akan menambahkan catatan kritis:
+> *"Catatan: Saya menambahkan field `priceAtPurchase` di tabel `OrderItem`. Ini penting agar jika harga produk induk berubah di masa depan, history transaksi lama tidak ikut berubah (masalah klasik normalisasi)."*
 
-Jangan biarkan skema ini hilang di chat history.
-
-1.  Buat file baru: `docs/db-schema.md` (atau `db-schema.json`).
-2.  Copy output JSON final dari AI ke sana.
-3.  **Commit file ini.**
-
-Di langkah coding selanjutnya (Modul 3), kamu akan merujuk file ini agar AI membuat kode yang properti-nya **persis** sama dengan desain database.
-
-> **Rule of Thumb:** "Coding frontend itu mudah jika struktur datanya sudah benar. Coding frontend itu neraka jika struktur datanya berubah-ubah."
+Ini adalah detail arsitektur tingkat senior yang otomatis ditangani oleh AI. Simpan skema ini di `dataconnect/schema.gql` dan kamu siap melangkah ke tahap backend.

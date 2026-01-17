@@ -1,84 +1,72 @@
 ---
-title: CI/CD & Deployment
-description: Otomatisasi proses deploy ke Firebase Hosting dengan GitHub Actions yang dirancang AI.
+title: 5.2 CI/CD: Firebase App Hosting
+description: Deploy aplikasi Next.js/Angular serverless tanpa konfigurasi YAML rumit.
 ---
 
-Coding selesai, fitur jalan, bug sudah dibasmi. Langkah terakhir adalah mempublikasikan karyamu ke dunia.
+Lupakan menulis 100 baris YAML untuk GitHub Actions.
+Lupakan konfigurasi CDN manual.
+Lupakan setup Docker container.
 
-Di masa lalu, deploy itu menakutkan: FTP upload manual, SSH ke server, restart Nginx, dan berdoa server tidak down. Di era **Vibe Coding**, deploy harusnya semudah `git push`.
+Di 2026, standar deployment untuk framework modern (Next.js, Angular, React) adalah **Firebase App Hosting**.
 
-## The Problem: "It Works on My Machine"
+## The Shift: Hosting vs App Hosting
 
-Deploy manual (lewat command `firebase deploy` di laptop) itu berisiko:
-1.  **Lingkungan Beda:** Node.js di laptopmu versi 20, di server versi 18. Error.
-2.  **Lupa Build:** Kamu deploy folder `dist/` yang lama karena lupa jalanin `npm run build`.
-3.  **Bus Factor:** Kalau cuma satu orang yang bisa deploy, project macet kalau dia sakit.
+| Fitur | Firebase Hosting (Lama) | Firebase App Hosting (Baru) |
+| :--- | :--- | :--- |
+| **Fokus** | Static Assets (HTML/CSS/JS). | **Full Stack Web Apps** (SSR/ISR). |
+| **Backend** | Cloud Functions (terpisah). | **Cloud Run** (terintegrasi otomatis). |
+| **Setup** | `firebase init` + GitHub Action YAML. | **Zero-Config** (Console Connect). |
 
-## The Vibe Solution: CI/CD Pipelines
+## Langkah 1: Connect GitHub
 
-Kita akan menggunakan **GitHub Actions** untuk otomatisasi. Setiap kali kamu push kode ke branch `main`, robot di GitHub akan:
-1.  Install dependencies.
-2.  Build project (memastikan tidak ada error compile).
-3.  Deploy ke Firebase Hosting.
+1.  Push kodemu ke GitHub.
+2.  Buka **Firebase Console** -> **App Hosting**.
+3.  Klik **"Get Started"**.
+4.  Pilih Repo GitHub kamu.
+5.  Set branch utama (misal: `main`).
 
-Tapi menulis file YAML untuk GitHub Actions itu rumit (indentasi salah sedikit, pipeline gagal). Biarkan AI yang menulisnya.
+Itu saja.
 
-### 📝 Langkah 1: Konfigurasi `firebase.json`
+Firebase akan otomatis mendeteksi:
+*   "Oh, ini Next.js versi 15."
+*   "Perlu Node.js versi 22."
+*   "Build command-nya `npm run build`."
 
-Sebelum deploy, pastikan Firebase tahu cara melayani aplikasimu. Terutama untuk Single Page Application (SPA) seperti React, kita butuh aturan "Rewrites".
+## Langkah 2: Environment Variables (Secrets)
 
-:::tip[Prompt Configurator]
-**Context:** Project ini adalah SPA menggunakan React + Vite. Output build ada di folder `dist`.
-**Task:** Buatkan konfigurasi `firebase.json` yang optimal.
+Jangan simpan API Key di kode!
+Di dashboard App Hosting, masuk ke tab **Settings** -> **Environment variables**.
 
-**Requirements:**
-1.  **Hosting:** Public folder adalah `dist`.
-2.  **Rewrites:** Semua request ke URL manapun harus diarahkan ke `index.html` (agar React Router bekerja).
-3.  **Headers:** Tambahkan header `Cache-Control` agresif untuk file statis (gambar/CSS) agar loading cepat, tapi `no-cache` untuk `index.html`.
-4.  **Emulators:** Sertakan config port default untuk Auth, Firestore, dan Functions emulator.
+Kamu bisa menyinkronkan secrets langsung dari **Google Cloud Secret Manager**.
+*   `GEMINI_API_KEY`: (Secret)
+*   `DATABASE_URL`: (Secret)
+
+App Hosting akan menyuntikkan (inject) variabel ini saat *build time* dan *run time* secara aman.
+
+## Langkah 3: Automatic Rollouts
+
+Setiap kali kamu push ke `main`, App Hosting akan:
+1.  Menarik kode baru.
+2.  Membangun container image di Cloud Build.
+3.  Melakukan **Traffic Splitting** (opsional) untuk rollout bertahap.
+4.  Mengganti versi lama dengan zero-downtime.
+
+### Preview Channels? Otomatis.
+Setiap Pull Request (PR) di GitHub akan otomatis mendapatkan URL preview unik. Kamu bisa tes fitur baru di lingkungan yang 100% mirip produksi sebelum merge.
+
+## Bagaimana jika Build Gagal?
+
+Di sinilah peran **Vibe Coder**.
+Jika build gagal, jangan panik baca log sendirian.
+
+:::tip[Prompt DevOps Agent]
+**Context:** Deployment App Hosting gagal.
+**Log:** (Paste log error dari Firebase Console).
+
+**Task:** Analisis penyebab kegagalan build.
+1.  Apakah karena versi Node.js tidak cocok?
+2.  Apakah ada Environment Variable yang kurang?
+3.  Berikan solusi perbaikan di `package.json` atau `apphosting.yaml` (jika perlu config manual).
 :::
 
-### 🚀 Langkah 2: The "DevOps Engineer" Prompt
-
-Sekarang minta AI membuatkan workflow GitHub Actions.
-
-:::tip[Prompt CI/CD]
-**Context:** Saya ingin setup **Continuous Deployment** ke Firebase Hosting.
-**Repo:** Project tersimpan di GitHub.
-**Secret:** Saya akan menyimpan service account key di GitHub Secrets dengan nama `FIREBASE_SERVICE_ACCOUNT_MY_PROJECT`.
-
-**Task:** Buatkan file workflow GitHub Actions (`.github/workflows/deploy.yml`).
-
-**Steps:**
-1.  **Trigger:** Jalan setiap ada `push` ke branch `main`.
-2.  **Environment:** Gunakan `ubuntu-latest`.
-3.  **Build:** Checkout code -> Install Node.js -> `npm ci` -> `npm run build`.
-4.  **Deploy:** Gunakan action `FirebaseExtended/action-hosting-deploy` untuk deploy ke channel `live`.
-
-**Output:** Kode YAML lengkap yang valid.
-:::
-
-## Setup Secrets
-
-AI akan mengingatkanmu, tapi ini langkah manual yang wajib:
-
-1.  Generate Service Account di Google Cloud Console (format JSON).
-2.  Buka Repo GitHub -> Settings -> Secrets and variables -> Actions.
-3.  Buat secret baru: `FIREBASE_SERVICE_ACCOUNT_MY_PROJECT`.
-4.  Paste isi JSON service account di sana.
-
-## Deployment Previews (Bonus)
-
-Salah satu fitur terbaik Firebase adalah **Preview Channels**. Kamu bisa deploy setiap Pull Request ke URL sementara (misal: `pr-123--my-app.web.app`) untuk direview sebelum di-merge.
-
-:::tip[Prompt Preview]
-"Tolong modifikasi file YAML tadi. Tambahkan job agar kalau ada **Pull Request**, dia deploy ke **Preview Channel** (bukan live). Dan post URL preview-nya sebagai komentar di PR tersebut."
-:::
-
-## Monitor & Rollback
-
-Setelah deploy otomatis berjalan:
-*   Buka tab **Actions** di GitHub untuk melihat proses build (hijau = sukses, merah = gagal).
-*   Jika deploy live merusak aplikasi, buka Firebase Console -> Hosting, lalu klik **Rollback** ke versi sebelumnya. Ini instan.
-
-> **Vibe Check:** "Deploy on Friday?" Kenapa takut? Kalau kamu punya CI/CD yang solid dan Unit Test yang otomatis berjalan sebelum deploy, hari Jumat hanyalah hari biasa.
+> **Vibe Check:** Tugasmu adalah coding fitur, bukan mengurus server. Serahkan infrastruktur pada App Hosting.

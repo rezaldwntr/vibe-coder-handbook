@@ -1,94 +1,81 @@
 ---
-title: Designing System Architecture
-description: Visualisasi alur sistem kompleks dengan diagram Mermaid.js instan.
+title: 2.2 Designing System Architecture
+description: Visualisasi alur sistem dengan bantuan penalaran Deep Think dan Mermaid.js.
 ---
 
-Dokumen teks seperti PRD itu penting, tapi manusia adalah makhluk visual. Seringkali, developer (dan stakeholder) tersesat dalam detail teks dan kehilangan gambaran besar bagaimana data mengalir antar komponen.
+Dokumen teks seperti PRD itu penting, tapi manusia adalah makhluk visual. Seringkali, developer tersesat dalam detail teks dan kehilangan gambaran besar ("Big Picture").
 
-Menggambar diagram manual di Figma/Lucidchart memakan waktu. Di **Vibe Coding**, kita membiarkan AI yang "menggambar" untuk kita menggunakan kode.
+Menggambar diagram manual di Figma/Lucidchart memakan waktu. Di **Vibe Coding**, kita membiarkan AI yang merancang logika aliran data, lalu memvisualisasikannya secara instan.
 
-## The Problem: The "Wall of Text"
+## The Problem: Logic Gaps
 
-Kamu punya PRD yang solid dan skema database yang rapi. Tapi saat mulai coding backend, kamu bingung:
-*"Tunggu, saat user klik 'Bayar', apakah kita update saldo dulu baru simpan transaksi, atau sebaliknya? Kapan notifikasi dikirim?"*
+Seringkali PRD terlihat bagus di atas kertas, tapi hancur saat implementasi.
+*"Tunggu, jika user offline saat checkout, lalu online lagi, apakah transaksinya duplikat?"*
 
-Kebingungan alur (Flow Logic) adalah sumber bug logika terbesar.
+Celah logika (*Logic Gaps*) ini sulit dideteksi hanya dengan membaca teks.
 
-## The Vibe Solution: Mermaid.js Generation
+## The Vibe Solution: Reasoning First, Drawing Later
 
-Kita tidak akan menggambar kotak dan panah satu per satu. Kita akan meminta Gemini untuk menulis kode **Mermaid.js**, sebuah sintaks markdown-like untuk membuat diagram.
+Kita menggunakan **Gemini 3 Deep Think** untuk memvalidasi logika terlebih dahulu, baru kemudian memintanya menulis kode **Mermaid.js**.
 
-### 🎯 The "System Architect" Prompt
+### 🎯 The "Architectural Validation" Prompt
 
-Pastikan kamu sudah punya `PRD.md` dan `docs/db-schema.md` (dari bab sebelumnya) di workspace agar AI paham konteks penuh.
+Pastikan `PRD.md` sudah ada di workspace.
 
 :::tip[Copy Prompt Ini]
-**Context:** Lihat @PRD.md dan @docs/db-schema.md.
-**Task:** Saya perlu memvisualisasikan alur fitur **[Nama Fitur, misal: Transaksi Setor Sampah]**.
+**Mode:** Deep Think
+**Context:** Lihat @PRD.md.
+**Task:** Rancang dan visualisasikan flow untuk fitur **[Nama Fitur, misal: Checkout Barang]**.
 
-Buatkan diagram **Sequence Diagram** menggunakan sintaks **Mermaid.js**.
+**Step 1: Reasoning (Deep Think)**
+Pikirkan semua kemungkinan *race conditions* dan *edge cases*. (Misal: Stok habis saat pembayaran diproses). Jelaskan strategi penanganannya.
 
-**Requirements:**
-1.  **Actors:** User, Frontend (Client), Backend (API/Cloud Functions), Firestore (Database).
-2.  **Flow:** Mulai dari user menginput data -> validasi -> database operations -> response -> UI update.
-3.  **Details:** Tunjukkan logic penting (misal: pengecekan saldo, update status).
-4.  **Error Handling:** Tunjukkan jalur alternatif jika terjadi error (misal: koneksi putus).
-
-**Output:** Hanya blok kode Mermaid.js.
+**Step 2: Visualization (Mermaid)**
+Berdasarkan reasoning di atas, buatkan **Sequence Diagram** (Mermaid.js) yang mencakup:
+1.  **Actors:** Client, Backend API, Database (PostgreSQL/Firestore), Payment Gateway.
+2.  **Logic:** Tunjukkan *happy path* DAN *unhappy path* (error handling).
+3.  **Detail:** Tampilkan nama fungsi/tabel yang relevan.
 :::
 
 ## Rendering Diagram
 
-Setelah AI memberikan blok kode (biasanya diawali `sequenceDiagram`), kamu punya dua cara untuk melihatnya:
+Setelah AI memberikan blok kode Mermaid, gunakan ekstensi VS Code "Mermaid Preview" untuk melihatnya.
 
-1.  **VS Code / IDX Extension:** Install ekstensi "Mermaid Preview" untuk melihat diagram langsung di editor.
-2.  **Mermaid Live Editor:** Copy kode tersebut ke [mermaid.live](https://mermaid.live).
+### Contoh Output (Deep Think Reasoning)
 
-### Contoh Output AI (Mermaid Code)
+> *"Analisis: Ada risiko 'Double Spending' jika user menekan tombol bayar 2x saat koneksi lambat. Solusi: Kita harus menerapkan Idempotency Key di level API dan database transaction yang atomik."*
+
+### Contoh Output (Mermaid Code)
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant FE as Frontend App
-    participant BE as Backend (Function)
-    participant DB as Firestore
-
-    U->>FE: Input Berat Sampah (2kg) & Klik "Setor"
-    FE->>FE: Validasi Input (Min 0.1kg)
-    FE->>BE: POST /api/transactions (uid, weight, type)
+    participant BE as Backend
+    participant DB as SQL DB
+    
+    U->>BE: POST /checkout (items, idempotencyKey)
     activate BE
-    BE->>BE: Validasi User Session
-    BE->>DB: Get TrashPriceConfig
-    DB-->>BE: Returns { price: 3000/kg }
-    BE->>BE: Calculate Total (2 * 3000 = 6000)
+    BE->>DB: BEGIN TRANSACTION
+    BE->>DB: SELECT * FROM Stock WHERE id IN (items) FOR UPDATE
     
-    par Update Data
-        BE->>DB: Create Transaction Doc (Pending)
-        BE->>DB: Update User Wallet (+6000)
+    alt Stok Cukup
+        BE->>DB: UPDATE Stock SET qty = qty - reqQty
+        BE->>DB: INSERT INTO Orders ...
+        DB-->>BE: COMMIT
+        BE-->>U: 200 OK (Order Created)
+    else Stok Habis
+        DB-->>BE: ROLLBACK
+        BE-->>U: 409 Conflict (Out of Stock)
     end
-    
-    BE-->>FE: Success Response { trxId: "123", total: 6000 }
     deactivate BE
-    
-    FE->>U: Show Success Modal & Update Saldo UI
 ```
 
-*(Jika kamu menginstall plugin mermaid di dokumentasi ini, kode di atas akan otomatis me-render diagram interaktif).*
+## Flowchart untuk Keputusan Bisnis
 
-## Flowchart untuk Logika Bercabang
-
-Selain Sequence Diagram (untuk urutan waktu), gunakan **Flowchart** untuk logika keputusan yang rumit.
+Selain Sequence Diagram, gunakan Flowchart untuk memetakan aturan bisnis yang kompleks.
 
 :::tip[Prompt Flowchart]
-"Buatkan **Flowchart** (Mermaid.js) untuk logika penentuan 'Level User' berdasarkan total sampah yang disetor. Ada kondisi: Bronze (<10kg), Silver (10-50kg), Gold (>50kg). Sertakan kondisi edge case."
+"Buatkan Flowchart untuk logika 'Fraud Detection' saat user baru mendaftar. Pikirkan parameter: IP address, device fingerprint, dan pola email."
 :::
 
-## Implementation: The "Blueprints" Folder
-
-Jangan biarkan diagram ini hilang.
-
-1.  Buat folder `docs/diagrams/`.
-2.  Simpan output AI ke file `.md` (misal: `docs/diagrams/transaction-flow.md`).
-3.  Gunakan previewer untuk selalu mengecek alur sebelum menulis baris kode pertama.
-
-> **Why this matters:** Dengan diagram ini, kamu tidak perlu "menebak-nebak" logika saat coding nanti. Kamu tinggal menerjemahkan panah-panah di diagram menjadi fungsi JavaScript/TypeScript.
+> **Why this matters:** Diagram yang dihasilkan bukan sekadar gambar cantik, tapi hasil dari simulasi logika mendalam yang dilakukan AI. Ini adalah "Blueprint" yang sudah teruji sebelum kamu menulis satu baris kode pun.

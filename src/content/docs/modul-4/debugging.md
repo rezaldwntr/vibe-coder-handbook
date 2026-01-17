@@ -1,69 +1,68 @@
 ---
-title: Bug Hunting & Fixing
-description: Teknik debugging sistematis dengan Error Analysis Prompting. Jangan sekadar copy-paste error!
+title: 4.2 Debugging (Active Intervention)
+description: Dari "Copy-Paste Log" manual menjadi "Active Agent Healing" dengan MCP.
 ---
 
-Debugging adalah momen di mana kesabaran developer diuji. Saat terminal merah membara dengan pesan error yang panjangnya 2 halaman, reaksi insting kita adalah langsung copy-paste semuanya ke chat AI dan berteriak *"FIX THIS!"*.
+Debugging cara lama:
+1.  Error muncul di terminal.
+2.  Block teks error.
+3.  Copy.
+4.  Paste ke ChatGPT.
+5.  Baca jawaban, coba fix manual.
 
-Ini disebut **Panic Pasting**. Dan ini cara yang buruk.
+Ini lambat. Di **Vibe Coding 2026**, Agen AI melakukan intervensi aktif.
 
-## The Problem: "Panic Pasting"
+## The Shift: Passive vs Active
 
-Jika kamu hanya melempar log error tanpa konteks, AI akan menebak-nebak. Ia mungkin memberimu solusi generik ("Coba restart server", "Coba install ulang node_modules") yang tidak relevan.
+| Debugging Lama | Debugging Vibe (2026) |
+| :--- | :--- |
+| **Sumber Data** | Copy-paste teks manual. | **MCP (Model Context Protocol)** akses langsung ke Logs. |
+| **Lingkup** | Lokal (apa yang di layar). | **Produksi** (Crashlytics, Cloud Logging). |
+| **Tindakan** | AI memberi saran teks. | **AI melakukan patch kode** otomatis. |
 
-Lebih parah lagi, jika AI langsung memberimu kode "perbaikan", kamu mungkin langsung copas tanpa paham apa yang salah. Besok error yang sama muncul lagi, dan kamu bingung lagi.
+## Skenario 1: Terminal Auto-Fix
 
-## The Vibe Solution: Root Cause First
+Firebase Studio dan terminal modern memiliki fitur **Proactive Error Detection**.
 
-Di **Vibe Coding**, kita memperlakukan AI sebagai **Detektif Forensik**, bukan sekadar montir. Kita ingin tahu *siapa pelakunya* dan *apa motifnya* sebelum memenjarakannya.
+Saat perintah `npm run build` gagal dengan warna merah membara:
+1.  Jangan scroll panik mencari penyebabnya.
+2.  Lihat tombol **"Fix with Gemini"** (atau icon kilau ✨) di samping pesan error terminal.
+3.  **Klik.**
 
-### 📝 Langkah 1: Siapkan Barang Bukti
+Agen akan:
+*   Menganalisis output error.
+*   Membaca file konfigurasi terkait (`package.json`, `vite.config.ts`).
+*   Menawarkan perbaikan (diff).
+*   Kamu tinggal klik **"Apply"**.
 
-Jangan hanya copy pesan errornya ("Error: Cannot read properties of undefined"). Copy juga **Stack Trace**-nya (daftar file dan nomor baris yang error).
+## Skenario 2: Production Debugging via MCP
 
-Jika error terjadi di UI, inspect element dan copy error dari Console Browser. Jika di backend, copy dari terminal.
+Bagaimana jika error terjadi di HP user, bukan di laptopmu?
+Gunakan integrasi **MCP Server** (seperti yang dibahas di Modul 1).
 
-### 🔍 Langkah 2: The "Error Analyst" Prompt
-
-Gunakan prompt ini untuk memaksa AI menjelaskan masalahnya dulu.
+### 🎯 The "Forensic Agent" Prompt
 
 :::tip[Copy Prompt Ini]
-**Context:** Saya mendapatkan error saat menjalankan fungsi `submitTransaction` di file @TransactionPage.tsx.
+**Tools:** Gunakan `firebase-mcp-server`
+**Task:** Investigasi lonjakan error di **Crashlytics** dalam 1 jam terakhir.
 
-**Error Log:**
-```text
-[PASTE FULL STACK TRACE DI SINI]
-```
-
-**Task:** Lakukan analisis mendalam (Root Cause Analysis).
-1.  **Trace:** Di baris berapa tepatnya error ini meledak?
-2.  **The "Why":** Jelaskan penyebab logisnya. Apakah ini masalah *Timing* (race condition), *Data Type* (string vs number), atau *Null Pointer* (undefined)?
-3.  **Solution:** Berikan solusi kode yang defensif (mencegah error ini terjadi lagi di masa depan), bukan sekadar *hotfix*.
+**Steps:**
+1.  Ambil stack trace dari top issue.
+2.  Cocokkan baris kode tersebut dengan **@repository** saat ini.
+3.  Analisis kenapa crash terjadi (misal: Null Pointer di Android versi tertentu?).
+4.  Buatkan **Fix** defensif di file terkait.
 :::
 
-## Contoh Analisis yang Baik
+Agen akan bekerja sendiri: menarik data log -> baca kode -> tulis patch.
 
-Jika promptmu benar, AI akan menjawab seperti ini:
+## Skenario 3: The "Heal" Command
 
-> **Root Cause:** Error terjadi di baris 45: `user.wallet.balance`.
-> Penyebabnya adalah variabel `user` masih `null` saat komponen pertama kali dirender. React mencoba membaca properti `wallet` dari null. Ini adalah masalah **Asynchronous Data Fetching**.
->
-> **Solusi:** Kita perlu menambahkan *Optional Chaining* (`user?.wallet?.balance`) atau menampilkan *Loading State* jika data belum siap.
+Untuk error logika yang *tricky* (tidak crash, tapi hasil salah), gunakan mode **Agent Auto-run**.
 
-## Strategi Debugging Lainnya
+:::tip[Prompt Healing]
+"Fungsi `calculateTax` di @TaxService.ts sepertinya salah hitung untuk user di area 'Bali'. Hasilnya 11% padahal harusnya 10%. Tolong buatkan **Unit Test** yang mereplikasi kasus ini (failing test), lalu perbaiki kodenya sampai test-nya pass (Green)."
+:::
 
-### 1. "Rubber Ducking" dengan AI
+Ini adalah teknik **Test-Driven Debugging (TDD)** yang diotomatisasi. AI yang membuat test, AI yang memperbaiki kode, AI yang memverifikasi hasilnya.
 
-Kadang kode tidak error, tapi hasilnya salah (Logic Bug). Ceritakan logikamu ke AI.
-
-*   *"Saya ingin loop ini berjalan 5 kali, tapi kenapa cuma jalan 4 kali? Ini kodenya..."*
-*   AI seringkali bisa melihat kesalahan "Off-by-one error" (< vs <=) yang terlewat oleh mata manusia.
-
-### 2. Sanitize Log (Penting!)
-
-Sebelum paste log ke AI, **HAPUS DATA SENSITIF**.
-*   API Keys
-*   Password / Token
-*   Nama/Email asli user (jika data real)
-
-> **Vibe Check:** Bug adalah guru terbaik. Jangan buru-buru menutup tiket bug. Pahami *kenapa* itu rusak, agar kamu tidak mengulangi kesalahan yang sama di fitur berikutnya.
+> **Vibe Check:** Jangan menjadi kurir data (copy-paste error). Jadilah komandan yang memerintahkan agen untuk menyelidiki dan memperbaiki situasi.

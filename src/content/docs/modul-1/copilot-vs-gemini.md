@@ -1,79 +1,58 @@
 ---
-title: 1.3 Copilot vs Gemini
-description: Membedakan peran Micro-Logic (Autocomplete) dan Macro-Logic (Chat) untuk kecepatan maksimal.
+title: 1.3 Evolusi Interaksi: 3 Mode Agen
+description: Memahami spektrum interaksi Ask, Agent, dan Auto-run Mode.
 ---
 
-Di Project IDX, kamu memiliki dua otak AI yang bekerja bersamaan: **GitHub Copilot/IDX AI** (di editor) dan **Gemini** (di chat panel). Kesalahan terbesar developer adalah memperlakukan keduanya sama.
+Dikotomi lama antara "Copilot" (Autocomplete) dan "Gemini" (Chat) sudah usang. Di Firebase Studio 2026, kita berinteraksi dengan AI melalui spektrum otonomi. Gemini kini hadir dalam **Tiga Mode Interaksi** yang berbeda.
 
-## The Problem: Tool Confusion
+Sebagai Vibe Coder, *skill* utamamu adalah tahu kapan harus berpindah gigi (shifting gears) antar mode ini.
 
-Banyak developer membuang waktu dengan:
-1.  **Over-Chatting:** Bertanya ke Gemini untuk hal sepele seperti *"Buatkan fungsi penjumlahan array"*. Ini memakan waktu 10-15 detik (konteks switch + mengetik + menunggu generate).
-2.  **Staring Contest:** Menunggu Copilot (Ghost Text) menulis seluruh arsitektur sistem dari halaman kosong. Copilot jago melengkapi pola, bukan meramal masa depan proyekmu.
+## 1. Ask Mode (The Consultant)
+Mode percakapan murni. Aman, pasif, dan tidak menyentuh kodemu.
 
-## The Vibe Solution: Micro vs Macro Logic
+*   **Fungsi:** Brainstorming, penjelasan konsep, pencarian dokumentasi.
+*   **Perilaku:** AI hanya merespons di panel chat. Tidak ada file yang berubah.
+*   **Kapan dipakai:**
+    *   "Jelaskan perbedaan `useEffect` dan `useLayoutEffect`."
+    *   "Apa strategi terbaik untuk migrasi dari NoSQL ke SQL?"
+    *   "Buatkan rencana fitur untuk sistem notifikasi."
 
-Untuk coding dengan kecepatan cahaya ("Vibe Coding"), kamu harus membedakan tugas mereka:
+## 2. Agent Mode (The Collaborator)
+Mode standar kolaborasi. AI mengusulkan perubahan, kamu yang menyetujui.
 
-### 1. Micro-Logic (The Sprinter)
-*   **Tool:** Autocomplete / Ghost Text.
-*   **Trigger:** Kecepatan mengetik, pola berulang, *boilerplate*.
-*   **Use Case:** Menutup kurung, melengkapi import, menulis *loops*, parameter fungsi, dan logika *line-by-line*.
-*   **Latency:** Milidetik.
+*   **Fungsi:** Refactoring, pembuatan fitur, debugging lintas file.
+*   **Perilaku:**
+    *   AI membaca prompt kamu.
+    *   AI menampilkan *Diff View* (perubahan kode) di editor.
+    *   Kamu harus klik **"Accept"** atau **"Reject"**.
+*   **Kapan dipakai:**
+    *   "Refactor komponen ini agar lebih modular."
+    *   "Tambahkan error handling di semua fungsi API."
+    *   "Perbaiki bug CSS di file ini."
 
-### 2. Macro-Logic (The Strategist)
-*   **Tool:** Gemini Chat Panel.
-*   **Trigger:** Kebuntuan logika, arsitektur baru, refactoring besar, debugging kompleks.
-*   **Use Case:** Membuat skema database, menjelaskan error log yang panjang, generate dokumentasi, atau membuat *scaffolding* awal.
-*   **Latency:** Detik.
+## 3. Agent (Auto-run) Mode (The Autonomous Worker)
+AI diberikan otonomi untuk menggunakan alat (terminal, file system) secara mandiri dalam loop tertutup.
 
-## The Prompt: The Hybrid Workflow
+*   **Fungsi:** Tugas repetitif, perbaikan error berantai, setup lingkungan.
+*   **Perilaku:**
+    *   AI bisa menjalankan perintah terminal (misal: `npm install`, `firebase deploy`).
+    *   AI bisa membuat/mengedit file tanpa persetujuan per-file (hanya laporan akhir).
+    *   AI bisa melakukan *Self-Correction* (jika command error, dia coba cara lain).
+*   **Batasan:** Kamu menetapkan *Security Boundaries* (misal: "Jangan delete file database").
+*   **Kapan dipakai:**
+    *   "Upgrade semua dependensi package.json dan pastikan tidak ada breaking changes dengan menjalankan test."
+    *   "Setup environment awal dan install semua library yang dibutuhkan."
+    *   "Scan seluruh proyek untuk menemukan *unused imports* dan hapus mereka."
 
-Teknik terbaik adalah menggunakan Gemini untuk **membuat peta (Map)**, dan Copilot untuk **mengemudi (Drive)**. Kita sebut ini **"Comment-Driven Development"**.
+## Tabel Strategi Pemilihan Mode
 
-Gunakan prompt ini ke Gemini saat kamu menghadapi logika kompleks yang kamu sendiri bingung mulai dari mana.
+| Kondisi | Mode yang Disarankan |
+| :--- | :--- |
+| Bingung konsep / Butuh ide | **Ask Mode** |
+| Coding fitur spesifik / Refactoring | **Agent Mode** |
+| Tugas housekeeping / Setup / Bulk Fixes | **Auto-run Mode** |
 
-:::tip[Copy Prompt Ini]
-**Context:** Saya ingin membuat fitur [Nama Fitur, misal: Rate Limiting Middleware] di Express.js menggunakan Redis.
-
-**Task:** Buatkan **Skeleton Code** saja dalam bentuk komentar (comments) langkah demi langkah.
-
-**Requirements:**
-1.  Jangan tulis implementasi kodenya, hanya struktur fungsi dan komentar logikanya (`// TODO: ...`).
-2.  Gunakan format komentar yang deskriptif agar bisa memancing (trigger) Autocomplete.
-3.  Bagi menjadi langkah-langkah kecil (Connect Redis -> Check Key -> Increment -> Expiry).
+:::tip[Filosofi Vibe Coding]
+Jangan gunakan *Ask Mode* untuk pekerjaan yang bisa diselesaikan *Auto-run Mode*.
+Jangan biarkan *Auto-run Mode* menyentuh logika bisnis inti tanpa pengawasan (*Agent Mode*).
 :::
-
-## Implementation: Fill-in-the-Middle (FIM)
-
-Setelah Gemini memberikan output kerangka komentar, paste ke editor kamu. Sekarang, biarkan Copilot (Autocomplete) mengambil alih.
-
-**Langkah Vibe Coding:**
-
-1.  **Paste** kerangka dari Gemini.
-2.  **Taruh kursor** di bawah komentar pertama.
-3.  **Tekan Enter** atau spasi.
-4.  **Tekan Tab** saat *ghost text* muncul.
-
-**Contoh Hasil Kerja (Code Editor):**
-
-```javascript
-// Middleware untuk Rate Limiting
-const rateLimiter = async (req, res, next) => {
-    const ip = req.ip;
-    
-    // 1. Cek koneksi ke Redis
-    // (Di sini Copilot akan langsung menyarankan: const client = await redis.connect();)
-    
-    // 2. Buat key unik berdasarkan IP
-    // (Copilot suggest: const key = `rate_limit:${ip}`;)
-    
-    // 3. Cek jumlah request saat ini
-    // (Copilot suggest: const currentRequests = await client.get(key);)
-    
-    // 4. Jika melebihi batas, return 429
-    // (Copilot suggest logic if > limit return res.status(429)...)
-};
-```
-
-Dengan teknik ini, kamu mendapatkan **struktur yang solid** (dari Gemini) dan **sintaks yang akurat** (dari Copilot) tanpa harus mengetik manual atau copy-paste blok kode raksasa yang mungkin perlu diedit ulang.
