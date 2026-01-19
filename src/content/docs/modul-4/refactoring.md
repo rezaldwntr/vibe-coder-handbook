@@ -1,5 +1,5 @@
 ---
-title: The Refactoring Partner
+title: 4.3 The Refactoring Partner
 description: Membersihkan kode spaghetti dan memecah "God Function" menjadi modul-modul kecil yang mudah dibaca.
 ---
 
