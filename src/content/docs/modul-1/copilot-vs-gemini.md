@@ -1,5 +1,5 @@
 ---
-title: 1.3 Evolusi Interaksi: 3 Mode Agen
+title: 1.3 Evolusi Interaksi
 description: Memahami spektrum interaksi Ask, Agent, dan Auto-run Mode.
 ---
 

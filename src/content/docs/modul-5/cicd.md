@@ -1,5 +1,5 @@
 ---
-title: 5.2 CI/CD: Firebase App Hosting
+title: 5.2 CI/CD Firebase App Hosting
 description: Deploy aplikasi Next.js/Angular serverless tanpa konfigurasi YAML rumit.
 ---
 

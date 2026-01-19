@@ -1,5 +1,5 @@
 ---
-title: Filosofi Vibe Coding: Redefinisi di Era Agentic AI
+title: Filosofi Vibe Coding Redefinisi di Era Agentic AI
 ---
 
 Selamat datang di era baru pengembangan perangkat lunak. Jika kamu membaca ini, kemungkinan besar kamu merasakan pergeseran tektonik tersebut. Cara kita membangun aplikasi hari ini sangat berbeda dengan lima tahun yang lalu.
